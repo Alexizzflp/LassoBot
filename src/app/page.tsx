@@ -234,6 +234,11 @@ export default function Home() {
   const [notas, setNotas] = useState<Nota[]>([])
   const [pronosticoReal, setPronosticoReal] = useState<Pronostico | null>(null)
 
+  // Asistencia
+  const [catAsistencia, setCatAsistencia] = useState('')
+  const [totalClases, setTotalClases] = useState('')
+  const [clasesAsistidas, setClasesAsistidas] = useState('')
+
   // Modales & Toast
   const [toast, setToast] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'nota' | 'materia' | 'categoria'; id: string } | null>(null)
@@ -281,72 +286,124 @@ export default function Home() {
     }
   }
 
-  // ── Handlers ──
+  // ── Handlers (con manejo de errores) ──
   const handleCrearMateria = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!nombreMateria) return
-    const nueva = await crearMateria(nombreMateria, esFundamental)
-    setNombreMateria('')
-    setEsFundamental(false)
-    await cargarListaMaterias()
-    seleccionarMateria(nueva)
-    showToast('Materia creada')
+    if (!nombreMateria.trim()) return
+    try {
+      const nueva = await crearMateria(nombreMateria.trim(), esFundamental)
+      setNombreMateria('')
+      setEsFundamental(false)
+      await cargarListaMaterias()
+      seleccionarMateria(nueva)
+      showToast('Materia creada')
+    } catch { showToast('Error al crear materia') }
   }
 
   const handleCrearCategoria = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!materiaSeleccionada?.id || !nombreCat || !pesoCat) return
-    await crearCategoria(materiaSeleccionada.id, nombreCat, Number(pesoCat))
-    setNombreCat('')
-    setPesoCat('')
-    await recargarDatos(materiaSeleccionada)
-    showToast('Categoría agregada')
+    if (!materiaSeleccionada?.id || !nombreCat.trim() || !pesoCat) return
+    const peso = Number(pesoCat)
+    if (peso <= 0 || peso > 100) return
+    if (pesoTotal + peso > 100) {
+      showToast(`Solo quedan ${100 - pesoTotal}% disponibles`)
+      return
+    }
+    try {
+      await crearCategoria(materiaSeleccionada.id, nombreCat.trim(), peso)
+      setNombreCat('')
+      setPesoCat('')
+      await recargarDatos(materiaSeleccionada)
+      showToast('Categoría agregada')
+    } catch { showToast('Error al crear categoría') }
   }
 
   const handleRegistrarNota = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!catSeleccionada || !tituloNota || !puntosNota) return
-    await registrarNota(catSeleccionada, tituloNota, Number(puntosNota))
-    setTituloNota('')
-    setPuntosNota('')
-    await recargarDatos(materiaSeleccionada!)
-    showToast('Nota registrada')
+    if (!catSeleccionada || !tituloNota.trim() || !puntosNota) return
+    const puntos = Number(puntosNota)
+    if (puntos < 0 || puntos > 100) {
+      showToast('La nota debe estar entre 0 y 100')
+      return
+    }
+    try {
+      await registrarNota(catSeleccionada, tituloNota.trim(), puntos)
+      setTituloNota('')
+      setPuntosNota('')
+      await recargarDatos(materiaSeleccionada!)
+      showToast('Nota registrada')
+    } catch { showToast('Error al registrar nota') }
   }
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return
-    if (confirmDelete.type === 'nota') {
-      await eliminarNota(confirmDelete.id)
-      await recargarDatos(materiaSeleccionada!)
-      showToast('Nota eliminada')
-    } else if (confirmDelete.type === 'categoria') {
-      await eliminarCategoria(confirmDelete.id)
-      await recargarDatos(materiaSeleccionada!)
-      showToast('Categoría eliminada')
-    } else {
-      await eliminarMateria(confirmDelete.id)
-      setMateriaSeleccionada(null)
-      await cargarListaMaterias()
-      showToast('Materia eliminada')
-    }
+    try {
+      if (confirmDelete.type === 'nota') {
+        await eliminarNota(confirmDelete.id)
+        await recargarDatos(materiaSeleccionada!)
+        showToast('Nota eliminada')
+      } else if (confirmDelete.type === 'categoria') {
+        await eliminarCategoria(confirmDelete.id)
+        await recargarDatos(materiaSeleccionada!)
+        showToast('Categoría eliminada')
+      } else {
+        await eliminarMateria(confirmDelete.id)
+        setMateriaSeleccionada(null)
+        await cargarListaMaterias()
+        showToast('Materia eliminada')
+      }
+    } catch { showToast('Error al eliminar') }
     setConfirmDelete(null)
   }
 
   const handleSaveEdit = async (nuevosPuntos: number) => {
     if (!editNota) return
-    await actualizarNota(editNota.id, nuevosPuntos)
-    await recargarDatos(materiaSeleccionada!)
-    setEditNota(null)
-    showToast('Nota actualizada')
+    if (nuevosPuntos < 0 || nuevosPuntos > 100) {
+      showToast('La nota debe estar entre 0 y 100')
+      return
+    }
+    try {
+      await actualizarNota(editNota.id, nuevosPuntos)
+      await recargarDatos(materiaSeleccionada!)
+      setEditNota(null)
+      showToast('Nota actualizada')
+    } catch { showToast('Error al actualizar nota') }
   }
 
   const handleSaveEditCategoria = async (nombre: string, peso: number) => {
     if (!editCategoria) return
-    await actualizarCategoria(editCategoria.id, nombre, peso)
-    await recargarDatos(materiaSeleccionada!)
-    setEditCategoria(null)
-    showToast('Categoría actualizada')
+    if (peso <= 0 || peso > 100) return
+    try {
+      await actualizarCategoria(editCategoria.id, nombre.trim(), peso)
+      await recargarDatos(materiaSeleccionada!)
+      setEditCategoria(null)
+      showToast('Categoría actualizada')
+    } catch { showToast('Error al actualizar categoría') }
   }
+
+  const handleRegistrarAsistencia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!catAsistencia || !totalClases || !clasesAsistidas) return
+    const total = Number(totalClases)
+    const asistidas = Number(clasesAsistidas)
+    if (total <= 0 || asistidas < 0 || asistidas > total) {
+      showToast('Verifica los datos de asistencia')
+      return
+    }
+    const notaAsistencia = Math.round((asistidas / total) * 100)
+    try {
+      await registrarNota(catAsistencia, `Asistencia (${asistidas}/${total})`, notaAsistencia)
+      setTotalClases('')
+      setClasesAsistidas('')
+      await recargarDatos(materiaSeleccionada!)
+      showToast(`Asistencia registrada: ${notaAsistencia} pts`)
+    } catch { showToast('Error al registrar asistencia') }
+  }
+
+  // Cálculo en vivo de asistencia
+  const asistenciaPreview = totalClases && clasesAsistidas && Number(totalClases) > 0
+    ? Math.round((Number(clasesAsistidas) / Number(totalClases)) * 100)
+    : null
 
   // ── Peso total de categorías ──
   const pesoTotal = categorias.reduce((s, c) => s + c.peso_porcentaje, 0)
@@ -553,14 +610,17 @@ export default function Home() {
                       />
                       <input
                         type="number"
-                        placeholder="Peso %"
+                        placeholder={`Peso % (disp: ${100 - pesoTotal}%)`}
                         value={pesoCat}
                         onChange={(e) => setPesoCat(e.target.value)}
-                        className="w-24 bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 transition-all text-sm placeholder:text-slate-600"
+                        min="1"
+                        max={100 - pesoTotal}
+                        className="w-36 bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 transition-all text-sm placeholder:text-slate-600"
                       />
                       <button
                         type="submit"
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-emerald-500/20"
+                        disabled={!nombreCat.trim() || !pesoCat || pesoTotal >= 100}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 disabled:hover:shadow-none"
                       >
                         + Agregar
                       </button>
@@ -636,14 +696,17 @@ export default function Home() {
                         />
                         <input
                           type="number"
-                          placeholder="Nota"
+                          placeholder="0-100"
                           value={puntosNota}
                           onChange={(e) => setPuntosNota(e.target.value)}
+                          min="0"
+                          max="100"
                           className="w-20 bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 transition-all text-sm placeholder:text-slate-600"
                         />
                         <button
                           type="submit"
-                          className="bg-sky-600 hover:bg-sky-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-sky-500/20"
+                          disabled={!catSeleccionada || !tituloNota.trim() || !puntosNota}
+                          className="bg-sky-600 hover:bg-sky-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 disabled:hover:shadow-none"
                         >
                           Guardar
                         </button>
@@ -715,6 +778,80 @@ export default function Home() {
                     </section>
                   )}
 
+                  {/* ── Asistencia ── */}
+                  {categorias.length > 0 && (
+                    <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 animate-slide-up" style={{ animationDelay: '120ms' }}>
+                      <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
+                        <span className="text-lg">📋</span> Calculadora de Asistencia
+                      </h3>
+                      <p className="text-slate-500 text-xs mb-4">
+                        Selecciona la categoría de asistencia, ingresa las clases y el sistema calculará la nota automáticamente.
+                      </p>
+
+                      <form onSubmit={handleRegistrarAsistencia} className="flex flex-wrap gap-3 items-end">
+                        <div className="flex-1 min-w-[160px]">
+                          <label className="text-xs text-slate-500 mb-1 block">Categoría</label>
+                          <select
+                            value={catAsistencia}
+                            onChange={(e) => setCatAsistencia(e.target.value)}
+                            className="w-full bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 transition-all text-sm cursor-pointer"
+                          >
+                            <option value="">Seleccionar</option>
+                            {categorias.map((c) => (
+                              <option key={c.id} value={c.id}>{c.nombre} ({c.peso_porcentaje}%)</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-28">
+                          <label className="text-xs text-slate-500 mb-1 block">Total clases</label>
+                          <input
+                            type="number"
+                            placeholder="Ej: 16"
+                            value={totalClases}
+                            onChange={(e) => setTotalClases(e.target.value)}
+                            min="1"
+                            className="w-full bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 transition-all text-sm placeholder:text-slate-600"
+                          />
+                        </div>
+                        <div className="w-28">
+                          <label className="text-xs text-slate-500 mb-1 block">Asistidas</label>
+                          <input
+                            type="number"
+                            placeholder="Ej: 14"
+                            value={clasesAsistidas}
+                            onChange={(e) => setClasesAsistidas(e.target.value)}
+                            min="0"
+                            max={totalClases || undefined}
+                            className="w-full bg-slate-800/60 border border-slate-700 text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 transition-all text-sm placeholder:text-slate-600"
+                          />
+                        </div>
+
+                        {/* Preview en vivo */}
+                        {asistenciaPreview !== null && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+                            <span className="text-xs text-slate-500">Nota:</span>
+                            <span className={`text-lg font-bold ${
+                              asistenciaPreview >= 91 ? 'text-emerald-400' :
+                              asistenciaPreview >= 81 ? 'text-sky-400' :
+                              asistenciaPreview >= 71 ? 'text-amber-400' :
+                              'text-red-400'
+                            }`}>
+                              {asistenciaPreview}
+                            </span>
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={!catAsistencia || !totalClases || !clasesAsistidas || Number(clasesAsistidas) > Number(totalClases)}
+                          className="bg-sky-600 hover:bg-sky-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 disabled:hover:shadow-none"
+                        >
+                          Guardar
+                        </button>
+                      </form>
+                    </section>
+                  )}
+
                   {/* ── Dashboard Pronóstico ── */}
                   {pronosticoReal && (
                     <section className="animate-slide-up" style={{ animationDelay: '160ms' }}>
@@ -723,12 +860,24 @@ export default function Home() {
                         <div className="bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-sky-500/20 rounded-2xl p-5 shadow-lg shadow-sky-500/5">
                           <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
                             <span className="text-lg">📊</span> Estado Actual
+                            <span className={`ml-auto text-xs px-3 py-1 rounded-full font-semibold ${
+                              pronosticoReal.estado === 'aprobada'
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : pronosticoReal.estado === 'reprobada'
+                                ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+                                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              {pronosticoReal.estado === 'aprobada' ? '✓ Aprobada' : pronosticoReal.estado === 'reprobada' ? '✗ A Repetir' : '● En Curso'}
+                            </span>
                           </h3>
 
                           <div className="grid grid-cols-3 gap-3 mb-5">
                             <div className="bg-slate-800/50 rounded-xl p-3 text-center">
                               <p className="text-2xl font-bold text-sky-400">{pronosticoReal.puntos_actuales}</p>
                               <p className="text-xs text-slate-500 mt-1">Puntos</p>
+                              <p className="text-xs mt-0.5 font-medium" style={{ color: pronosticoReal.puntos_actuales >= 91 ? '#34d399' : pronosticoReal.puntos_actuales >= 81 ? '#38bdf8' : pronosticoReal.puntos_actuales >= 71 ? '#fbbf24' : pronosticoReal.puntos_actuales >= 61 ? '#fb923c' : '#f87171' }}>
+                                {pronosticoReal.porcentaje_acumulado > 0 ? (pronosticoReal.puntos_actuales >= 91 ? 'Letra A' : pronosticoReal.puntos_actuales >= 81 ? 'Letra B' : pronosticoReal.puntos_actuales >= 71 ? 'Letra C' : pronosticoReal.puntos_actuales >= 61 ? 'Letra D' : 'Letra F') : ''}
+                              </p>
                             </div>
                             <div className="bg-slate-800/50 rounded-xl p-3 text-center">
                               <p className="text-2xl font-bold text-emerald-400">{pronosticoReal.porcentaje_acumulado}%</p>

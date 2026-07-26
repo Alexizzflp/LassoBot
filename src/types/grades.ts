@@ -31,4 +31,5 @@ export interface Pronostico {
     para_B: number | string
     para_C: number | string
     para_D: number | string
+    estado: 'aprobada' | 'reprobada' | 'en_curso'
 }
