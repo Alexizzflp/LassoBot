@@ -15,203 +15,13 @@ import {
 } from '@/lib/materias'
 import { calcularPronostico } from '@/lib/calculadora'
 import { Materia, CategoriaEvaluacion, Nota, Pronostico } from '@/types/grades'
+import HelpTooltip from '@/components/HelpTooltip'
 
-// ── Toast Component ──
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 2500)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  return (
-    <div className="fixed top-6 right-6 z-50 toast-enter">
-      <div className="flex items-center gap-3 bg-emerald-900/90 border border-emerald-500/40 text-emerald-100 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-sm">
-        <span className="text-lg">✓</span>
-        <span className="text-sm font-medium">{message}</span>
-      </div>
-    </div>
-  )
-}
-
-// ── Confirm Modal ──
-function ConfirmModal({
-  message,
-  onConfirm,
-  onCancel
-}: {
-  message: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
-        <p className="text-slate-100 text-base mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Eliminar
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Edit Modal ──
-function EditModal({
-  currentValue,
-  onSave,
-  onCancel
-}: {
-  currentValue: number
-  onSave: (val: number) => void
-  onCancel: () => void
-}) {
-  const [value, setValue] = useState(String(currentValue))
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
-        <h4 className="text-slate-100 font-semibold mb-4">Editar calificación</h4>
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          autoFocus
-          className="w-full bg-slate-900 border border-slate-600 text-white px-4 py-3 rounded-xl outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/30 transition-all text-lg"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && value && !isNaN(Number(value))) {
-              onSave(Number(value))
-            }
-            if (e.key === 'Escape') onCancel()
-          }}
-        />
-        <div className="flex gap-3 justify-end mt-5">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => {
-              if (value && !isNaN(Number(value))) onSave(Number(value))
-            }}
-            className="px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Edit Categoria Modal ──
-function EditCategoriaModal({
-  nombre: initialNombre,
-  peso: initialPeso,
-  onSave,
-  onCancel
-}: {
-  nombre: string
-  peso: number
-  onSave: (nombre: string, peso: number) => void
-  onCancel: () => void
-}) {
-  const [nombre, setNombre] = useState(initialNombre)
-  const [peso, setPeso] = useState(String(initialPeso))
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-800 border border-slate-600 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
-        <h4 className="text-slate-100 font-semibold mb-4">Editar categoría</h4>
-        <div className="space-y-3">
-          <input
-            type="text"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre"
-            autoFocus
-            className="w-full bg-slate-900 border border-slate-600 text-white px-4 py-3 rounded-xl outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/30 transition-all text-sm"
-          />
-          <input
-            type="number"
-            value={peso}
-            onChange={(e) => setPeso(e.target.value)}
-            placeholder="Peso %"
-            className="w-full bg-slate-900 border border-slate-600 text-white px-4 py-3 rounded-xl outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/30 transition-all text-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && nombre && peso && !isNaN(Number(peso))) {
-                onSave(nombre, Number(peso))
-              }
-              if (e.key === 'Escape') onCancel()
-            }}
-          />
-        </div>
-        <div className="flex gap-3 justify-end mt-5">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => {
-              if (nombre && peso && !isNaN(Number(peso))) onSave(nombre, Number(peso))
-            }}
-            className="px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500 transition-colors text-sm font-medium cursor-pointer"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Progress Bar ──
-function ProgressBar({ value, max, color, label }: { value: number | string; max: number; color: string; label: string }) {
-  const numValue = typeof value === 'number' ? value : 0
-  const isSpecial = typeof value === 'string'
-  const percentage = isSpecial ? 0 : Math.min((numValue / max) * 100, 100)
-  const isImpossible = value === 'Imposible alcanzarla'
-  const isSecured = value === '¡Ya asegurada!'
-
-  const colorMap: Record<string, string> = {
-    green: 'bg-emerald-500',
-    blue: 'bg-sky-500',
-    yellow: 'bg-amber-500',
-    red: 'bg-red-500',
-    cyan: 'bg-cyan-400',
-  }
-
-  return (
-    <div className="mb-3">
-      <div className="flex justify-between items-center mb-1.5">
-        <span className="text-sm text-slate-300">{label}</span>
-        <span className={`text-sm font-bold ${isImpossible ? 'text-red-400' : isSecured ? 'text-emerald-400' : 'text-slate-100'}`}>
-          {isSpecial ? String(value) : `${numValue} pts promedio`}
-        </span>
-      </div>
-      <div className="h-2 bg-slate-700/60 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full animate-progress-fill transition-all ${isImpossible ? 'bg-red-500/30' : isSecured ? 'bg-emerald-500' : colorMap[color] || 'bg-sky-500'}`}
-          style={{ width: isSecured ? '100%' : `${Math.min(percentage, 100)}%` }}
-        />
-      </div>
-    </div>
-  )
-}
+import Toast from '@/components/ui/Toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+import EditModal from '@/components/ui/EditModal'
+import EditCategoriaModal from '@/components/ui/EditCategoriaModal'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 // ── Main Page ──
 export default function Home() {
@@ -248,12 +58,15 @@ export default function Home() {
   // Mobile sidebar
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Submitting states
+  const [isSubmittingMateria, setIsSubmittingMateria] = useState(false)
+  const [isSubmittingCategoria, setIsSubmittingCategoria] = useState(false)
+  const [isSubmittingNota, setIsSubmittingNota] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
   const showToast = useCallback((msg: string) => {
     setToast(msg)
-  }, [])
-
-  useEffect(() => {
-    cargarListaMaterias()
   }, [])
 
   const cargarListaMaterias = async () => {
@@ -261,6 +74,8 @@ export default function Home() {
     try {
       const lista = await obtenerMaterias()
       setMaterias(lista)
+    } catch {
+      showToast('⚠️ Error de conexión: Verifica si tu proyecto de Supabase está activo')
     } finally {
       setLoading(false)
     }
@@ -281,15 +96,24 @@ export default function Home() {
       setNotas(nts)
       const pron = calcularPronostico(cats, nts, mat.es_fundamental)
       setPronosticoReal(pron)
+    } catch {
+      showToast('⚠️ Error de conexión con la base de datos')
     } finally {
       setLoadingDatos(false)
     }
   }
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarListaMaterias()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Handlers (con manejo de errores) ──
   const handleCrearMateria = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!nombreMateria.trim()) return
+    if (!nombreMateria.trim() || isSubmittingMateria) return
+    setIsSubmittingMateria(true)
     try {
       const nueva = await crearMateria(nombreMateria.trim(), esFundamental)
       setNombreMateria('')
@@ -298,17 +122,19 @@ export default function Home() {
       seleccionarMateria(nueva)
       showToast('Materia creada')
     } catch { showToast('Error al crear materia') }
+    finally { setIsSubmittingMateria(false) }
   }
 
   const handleCrearCategoria = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!materiaSeleccionada?.id || !nombreCat.trim() || !pesoCat) return
+    if (!materiaSeleccionada?.id || !nombreCat.trim() || !pesoCat || isSubmittingCategoria) return
     const peso = Number(pesoCat)
     if (peso <= 0 || peso > 100) return
     if (pesoTotal + peso > 100) {
       showToast(`Solo quedan ${100 - pesoTotal}% disponibles`)
       return
     }
+    setIsSubmittingCategoria(true)
     try {
       await crearCategoria(materiaSeleccionada.id, nombreCat.trim(), peso)
       setNombreCat('')
@@ -316,16 +142,18 @@ export default function Home() {
       await recargarDatos(materiaSeleccionada)
       showToast('Categoría agregada')
     } catch { showToast('Error al crear categoría') }
+    finally { setIsSubmittingCategoria(false) }
   }
 
   const handleRegistrarNota = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!catSeleccionada || !tituloNota.trim() || !puntosNota) return
+    if (!catSeleccionada || !tituloNota.trim() || !puntosNota || isSubmittingNota) return
     const puntos = Number(puntosNota)
     if (puntos < 0 || puntos > 100) {
       showToast('La nota debe estar entre 0 y 100')
       return
     }
+    setIsSubmittingNota(true)
     try {
       await registrarNota(catSeleccionada, tituloNota.trim(), puntos)
       setTituloNota('')
@@ -333,10 +161,12 @@ export default function Home() {
       await recargarDatos(materiaSeleccionada!)
       showToast('Nota registrada')
     } catch { showToast('Error al registrar nota') }
+    finally { setIsSubmittingNota(false) }
   }
 
   const handleConfirmDelete = async () => {
-    if (!confirmDelete) return
+    if (!confirmDelete || isDeleting) return
+    setIsDeleting(true)
     try {
       if (confirmDelete.type === 'nota') {
         await eliminarNota(confirmDelete.id)
@@ -353,32 +183,39 @@ export default function Home() {
         showToast('Materia eliminada')
       }
     } catch { showToast('Error al eliminar') }
-    setConfirmDelete(null)
+    finally {
+      setIsDeleting(false)
+      setConfirmDelete(null)
+    }
   }
 
   const handleSaveEdit = async (nuevosPuntos: number) => {
-    if (!editNota) return
+    if (!editNota || isEditing) return
     if (nuevosPuntos < 0 || nuevosPuntos > 100) {
       showToast('La nota debe estar entre 0 y 100')
       return
     }
+    setIsEditing(true)
     try {
       await actualizarNota(editNota.id, nuevosPuntos)
       await recargarDatos(materiaSeleccionada!)
       setEditNota(null)
       showToast('Nota actualizada')
     } catch { showToast('Error al actualizar nota') }
+    finally { setIsEditing(false) }
   }
 
   const handleSaveEditCategoria = async (nombre: string, peso: number) => {
-    if (!editCategoria) return
+    if (!editCategoria || isEditing) return
     if (peso <= 0 || peso > 100) return
+    setIsEditing(true)
     try {
       await actualizarCategoria(editCategoria.id, nombre.trim(), peso)
       await recargarDatos(materiaSeleccionada!)
       setEditCategoria(null)
       showToast('Categoría actualizada')
     } catch { showToast('Error al actualizar categoría') }
+    finally { setIsEditing(false) }
   }
 
   const handleRegistrarAsistencia = async (e: React.FormEvent) => {
@@ -400,7 +237,6 @@ export default function Home() {
     } catch { showToast('Error al registrar asistencia') }
   }
 
-  // Cálculo en vivo de asistencia
   const asistenciaPreview = totalClases && clasesAsistidas && Number(totalClases) > 0
     ? Math.round((Number(clasesAsistidas) / Number(totalClases)) * 100)
     : null
@@ -425,6 +261,7 @@ export default function Home() {
           }
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}
+          isSubmitting={isDeleting}
         />
       )}
       {editNota && (
@@ -432,6 +269,7 @@ export default function Home() {
           currentValue={editNota.puntos}
           onSave={handleSaveEdit}
           onCancel={() => setEditNota(null)}
+          isSubmitting={isEditing}
         />
       )}
       {editCategoria && (
@@ -440,42 +278,35 @@ export default function Home() {
           peso={editCategoria.peso}
           onSave={handleSaveEditCategoria}
           onCancel={() => setEditCategoria(null)}
+          isSubmitting={isEditing}
         />
       )}
 
-      {/* Header */}
-      <header className="border-b border-slate-800/60 bg-[#0a0f1a]/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">
-                Lazzobot
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 hidden sm:block">Pronóstico de Calificaciones UTP 🇵🇦</p>
-            </div>
-          </div>
-          {materiaSeleccionada && (
-            <div className="flex items-center gap-2 animate-fade-in">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                materiaSeleccionada.es_fundamental
-                  ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
-                  : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-              }`}>
-                {materiaSeleccionada.es_fundamental ? 'Fundamental · Mín. 71' : 'No Fundamental · Mín. 61'}
-              </span>
-            </div>
-          )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden p-2 -ml-2 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span className="text-sm font-medium">Mis Materias</span>
+          </button>
         </div>
-      </header>
+        
+        {materiaSeleccionada && (
+          <div className="flex items-center gap-2 animate-fade-in">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              materiaSeleccionada.es_fundamental
+                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+            }`}>
+              {materiaSeleccionada.es_fundamental ? 'Fundamental · Mín. 71' : 'No Fundamental · Mín. 61'}
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex gap-6">
@@ -491,14 +322,14 @@ export default function Home() {
               onClick={() => setSidebarOpen(false)}
             />
 
-            <div className="relative z-10 w-80 max-w-[85vw] h-full md:h-auto bg-[#0c1120] md:bg-transparent overflow-y-auto md:overflow-visible p-4 md:p-0">
+            <div className="relative z-10 w-80 max-w-[85vw] h-full md:h-auto bg-[#0a0f1a] md:bg-transparent overflow-y-auto md:overflow-visible p-4 md:p-0 border-r border-slate-800 md:border-none md:sticky md:top-24 md:max-h-[calc(100vh-120px)] flex flex-col">
               {/* Materias List */}
-              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 animate-slide-up">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-base flex items-center gap-2">
+              <div className="bg-[#0f1525] border border-slate-800/80 shadow-xl shadow-black/20 rounded-2xl p-5 animate-slide-up">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-semibold text-[15px] flex items-center gap-2 tracking-wide text-slate-100">
                     <span className="text-lg">📚</span> Mis Materias
                   </h3>
-                  <span className="text-xs text-slate-500">{materias.length} total</span>
+                  <span className="text-[11px] font-bold bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full">{materias.length}</span>
                 </div>
 
                 {loading ? (
@@ -508,20 +339,22 @@ export default function Home() {
                     ))}
                   </div>
                 ) : materias.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-3">📭</div>
-                    <p className="text-slate-500 text-sm">No tienes materias aún</p>
-                    <p className="text-slate-600 text-xs mt-1">Crea tu primera materia abajo ↓</p>
+                  <div className="text-center py-10 bg-slate-900/30 rounded-xl border border-dashed border-slate-800/80">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-slate-800/80 flex items-center justify-center mb-3">
+                      <span className="text-2xl">📭</span>
+                    </div>
+                    <p className="text-slate-400 text-sm font-medium">No tienes materias aún</p>
+                    <p className="text-slate-500 text-xs mt-1">Crea tu primera materia abajo ↓</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 stagger-children">
+                  <div className="space-y-2 stagger-children overflow-y-auto max-h-[35vh] md:max-h-[45vh] p-1.5 -m-1.5 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     {materias.map((m) => (
                       <div
                         key={m.id}
                         onClick={() => seleccionarMateria(m)}
-                        className={`group flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
+                        className={`group flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                           materiaSeleccionada?.id === m.id
-                            ? 'border-sky-500/50 bg-sky-500/10 shadow-lg shadow-sky-500/5'
+                            ? 'border-sky-500/50 bg-sky-500/10 shadow-lg shadow-sky-500/5 hover:shadow-sky-500/10'
                             : 'border-slate-700/50 bg-slate-800/30 hover:border-slate-600 hover:bg-slate-800/60'
                         }`}
                       >
@@ -569,9 +402,10 @@ export default function Home() {
                     </label>
                     <button
                       type="submit"
-                      className="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/20 text-sm cursor-pointer"
+                      disabled={isSubmittingMateria || !nombreMateria.trim()}
+                      className="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-sky-500/20 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     >
-                      Guardar Materia
+                      {isSubmittingMateria ? 'Guardando...' : 'Guardar Materia'}
                     </button>
                   </form>
                 </div>
@@ -619,10 +453,10 @@ export default function Home() {
                       />
                       <button
                         type="submit"
-                        disabled={!nombreCat.trim() || !pesoCat || pesoTotal >= 100}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 disabled:hover:shadow-none"
+                        disabled={isSubmittingCategoria || !nombreCat.trim() || !pesoCat || pesoTotal >= 100}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 disabled:hover:shadow-none flex items-center justify-center min-w-[100px]"
                       >
-                        + Agregar
+                        {isSubmittingCategoria ? '...' : '+ Agregar'}
                       </button>
                     </form>
 
@@ -665,7 +499,11 @@ export default function Home() {
                         </span>
                       </div>
                     ) : (
-                      <p className="text-slate-600 text-sm">Agrega las categorías de evaluación del profesor</p>
+                      <div className="flex flex-col items-center justify-center py-6 text-center border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+                        <span className="text-3xl mb-2">⚙️</span>
+                        <p className="text-slate-400 text-sm font-medium">Aún no hay categorías</p>
+                        <p className="text-slate-500 text-xs mt-1 max-w-[200px]">Agrega las categorías de evaluación del profesor (ej: Parciales 30%)</p>
+                      </div>
                     )}
                   </section>
 
@@ -705,10 +543,10 @@ export default function Home() {
                         />
                         <button
                           type="submit"
-                          disabled={!catSeleccionada || !tituloNota.trim() || !puntosNota}
-                          className="bg-sky-600 hover:bg-sky-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 disabled:hover:shadow-none"
+                          disabled={isSubmittingNota || !catSeleccionada || !tituloNota.trim() || !puntosNota}
+                          className="bg-sky-600 hover:bg-sky-500 text-white font-medium px-5 py-2.5 rounded-xl transition-all text-sm cursor-pointer hover:shadow-lg hover:shadow-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 disabled:hover:shadow-none flex items-center justify-center min-w-[100px]"
                         >
-                          Guardar
+                          {isSubmittingNota ? '...' : 'Guardar'}
                         </button>
                       </form>
 
@@ -769,10 +607,12 @@ export default function Home() {
                           </table>
                         </div>
                       ) : (
-                        <div className="text-center py-8">
-                          <div className="text-3xl mb-2">📋</div>
-                          <p className="text-slate-500 text-sm">Sin notas registradas</p>
-                          <p className="text-slate-600 text-xs mt-1">Registra tu primera calificación arriba</p>
+                        <div className="text-center py-12 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800/80">
+                          <div className="w-14 h-14 mx-auto rounded-full bg-sky-900/20 text-sky-400 flex items-center justify-center mb-4">
+                            <span className="text-2xl">📋</span>
+                          </div>
+                          <p className="text-slate-300 text-sm font-medium">Sin notas registradas</p>
+                          <p className="text-slate-500 text-xs mt-1">Registra tu primera calificación en el formulario</p>
                         </div>
                       )}
                     </section>
@@ -959,6 +799,13 @@ export default function Home() {
           </main>
         </div>
       </div>
+
+      {/* Tooltip de Ayuda */}
+      <HelpTooltip 
+        moduleId="calificaciones"
+        title="Módulo de Calificaciones"
+        description="Aquí puedes registrar tus materias, agregar las categorías de evaluación que indique tu profesor (ej: Parciales 30%, Proyecto 40%) y anotar tus calificaciones. El sistema calculará automáticamente qué nota necesitas en los siguientes trabajos para aprobar."
+      />
     </div>
   )
 }

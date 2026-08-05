@@ -1,11 +1,19 @@
 import { supabase } from '@/lib/supabase'
 import { Materia, CategoriaEvaluacion, Nota } from '@/types/grades'
 
+// --- HELPER PARA USUARIO ---
+async function getUserId() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("No autenticado")
+    return user.id
+}
+
 // --- CREAR ---
 export async function crearMateria(nombre: string, esFundamental: boolean = false) {
+    const userId = await getUserId()
     const { data, error } = await supabase
         .from('materias')
-        .insert([{ nombre, es_fundamental: esFundamental }])
+        .insert([{ nombre, es_fundamental: esFundamental, user_id: userId }])
         .select()
 
     if (error) throw new Error(error.message)
@@ -13,9 +21,10 @@ export async function crearMateria(nombre: string, esFundamental: boolean = fals
 }
 
 export async function crearCategoria(materiaId: string, nombre: string, pesoPorcentaje: number) {
+    const userId = await getUserId()
     const { data, error } = await supabase
         .from('categorias_evaluacion')
-        .insert([{ materia_id: materiaId, nombre, peso_porcentaje: pesoPorcentaje }])
+        .insert([{ materia_id: materiaId, nombre, peso_porcentaje: pesoPorcentaje, user_id: userId }])
         .select()
 
     if (error) throw new Error(error.message)
@@ -23,9 +32,10 @@ export async function crearCategoria(materiaId: string, nombre: string, pesoPorc
 }
 
 export async function registrarNota(categoriaId: string, titulo: string, puntosObtenidos: number) {
+    const userId = await getUserId()
     const { data, error } = await supabase
         .from('notas')
-        .insert([{ categoria_id: categoriaId, titulo, puntos_obtenidos: puntosObtenidos }])
+        .insert([{ categoria_id: categoriaId, titulo, puntos_obtenidos: puntosObtenidos, user_id: userId }])
         .select()
 
     if (error) throw new Error(error.message)
